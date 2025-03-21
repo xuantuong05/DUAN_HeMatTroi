@@ -10,21 +10,25 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
 document.body.appendChild(renderer.domElement);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
 // 🎮 Điều khiển xoay và zoom
 const controls = new THREE.OrbitControls(camera, renderer.domElement);
 camera.position.set(0, 50, 1000);
 controls.enableDamping = true;
 
-// 🌞 Ánh sáng Mặt Trời
-const sunLight = new THREE.PointLight(0xffcc66, 2, 5000);
+const sunLight = new THREE.PointLight(0xffcc66, 3, 5000);
 sunLight.position.set(0, 0, 0);
+sunLight.castShadow = true;
 scene.add(sunLight);
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
+
+// Ánh sáng môi trường
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
 scene.add(ambientLight);
 
 // 🌟 Hiệu ứng phát sáng từ Mặt Trời
-const sunGlowTexture = new THREE.TextureLoader().load("assets/sun-glow.png");
+const sunGlowTexture = new THREE.TextureLoader().load("assets/sun.png");
 const sunGlow = new THREE.Sprite(
   new THREE.SpriteMaterial({
     map: sunGlowTexture,
@@ -45,21 +49,42 @@ const sun = new THREE.Mesh(new THREE.SphereGeometry(20, 64, 64), sunMaterial);
 sun.receiveShadow = true;
 scene.add(sun);
 
-// ☄️ Sao chổi bay ngang
-const cometGeometry = new THREE.SphereGeometry(2, 16, 16);
-const cometMaterial = new THREE.MeshStandardMaterial({
+const cometTailMaterial = new THREE.PointsMaterial({
   color: 0xffffcc,
-  emissive: 0xffffaa,
+  size: 2,
+  transparent: true,
+  opacity: 0.8,
+  depthWrite: false,
 });
-const comet = new THREE.Mesh(cometGeometry, cometMaterial);
-scene.add(comet);
 
-let cometAngle = 0;
+const cometTailGeometry = new THREE.BufferGeometry();
+const tailPositions = new Float32Array(50 * 3);
+cometTailGeometry.setAttribute(
+  "position",
+  new THREE.BufferAttribute(tailPositions, 3)
+);
+
+const cometTail = new THREE.Points(cometTailGeometry, cometTailMaterial);
+scene.add(cometTail);
+
+// Cập nhật sao chổi với đuôi động
 function updateComet() {
   cometAngle += 0.002;
   comet.position.x = Math.cos(cometAngle) * 1200;
   comet.position.z = Math.sin(cometAngle) * 800;
   comet.position.y = Math.sin(cometAngle * 2) * 300;
+
+  // Cập nhật vị trí đuôi sao chổi
+  for (let i = 49; i > 0; i--) {
+    tailPositions[i * 3] = tailPositions[(i - 1) * 3];
+    tailPositions[i * 3 + 1] = tailPositions[(i - 1) * 3 + 1];
+    tailPositions[i * 3 + 2] = tailPositions[(i - 1) * 3 + 2];
+  }
+  tailPositions[0] = comet.position.x;
+  tailPositions[1] = comet.position.y;
+  tailPositions[2] = comet.position.z;
+
+  cometTailGeometry.attributes.position.needsUpdate = true;
 }
 
 // 🪐 Hàm tạo hành tinh
@@ -153,15 +178,13 @@ document.addEventListener("mousemove", (event) => {
   }
 });
 
-// 🎞 Vòng lặp Animation
+let asteroidSpeed = 0.0005; // Tốc độ quay của vành đai tiểu hành tinh
+
 function animate() {
   requestAnimationFrame(animate);
-  // Xoay vòng quỹ đạo để giữ nguyên góc nhìn
-  scene.children.forEach((child) => {
-    if (child instanceof THREE.Mesh && child.geometry.type === "RingGeometry") {
-      child.rotation.x = Math.PI / 2;
-    }
-  });
+
+  // Quay vành đai tiểu hành tinh
+  asteroidBelt.rotation.y += asteroidSpeed;
 
   // Quỹ đạo hành tinh
   planets.forEach((planet) => {
@@ -171,40 +194,6 @@ function animate() {
     planet.position.z =
       Math.sin(planet.userData.angle) * planet.userData.distance;
     planet.rotation.y += 0.01;
-  });
-  // 🌌 Thêm vòng quỹ đạo cho mỗi hành tinh
-  function createOrbit(distance) {
-    const orbitGeometry = new THREE.RingGeometry(
-      distance - 0.5,
-      distance + 0.5,
-      64
-    );
-    const orbitMaterial = new THREE.MeshBasicMaterial({
-      color: 0xffffff,
-      side: THREE.DoubleSide,
-      transparent: true, // Cho phép điều chỉnh độ trong suốt
-      opacity: 0.3, // Làm mờ vòng quỹ đạo
-    });
-    const orbit = new THREE.Mesh(orbitGeometry, orbitMaterial);
-    orbit.rotation.x = Math.PI / 2;
-    scene.add(orbit);
-  }
-  // 🌀 Tạo vòng quỹ đạo cho mỗi hành tinh
-  planets.forEach((planet) => {
-    const orbitGeometry = new THREE.RingGeometry(
-      planet.userData.distance - 0.5,
-      planet.userData.distance + 0.5,
-      64
-    );
-    const orbitMaterial = new THREE.MeshBasicMaterial({
-      color: 0xffffff,
-      side: THREE.DoubleSide,
-      transparent: true,
-      opacity: 0.3,
-    });
-    const orbit = new THREE.Mesh(orbitGeometry, orbitMaterial);
-    orbit.rotation.x = Math.PI / 2;
-    scene.add(orbit);
   });
 
   // Quỹ đạo Mặt Trăng
@@ -222,30 +211,8 @@ function animate() {
   controls.update();
   renderer.render(scene, camera);
 }
+
 const cometTailTexture = new THREE.TextureLoader().load(
   "assets/comet-tail.png"
 );
-const cometTail = new THREE.Sprite(
-  new THREE.SpriteMaterial({
-    map: cometTailTexture,
-    color: 0xffffaa,
-    transparent: true,
-    opacity: 0.7,
-  })
-);
-cometTail.scale.set(10, 30, 1);
-scene.add(cometTail);
-
-// Cập nhật sao chổi với đuôi
-function updateComet() {
-  cometAngle += 0.002;
-  comet.position.x = Math.cos(cometAngle) * 1200;
-  comet.position.z = Math.sin(cometAngle) * 800;
-  comet.position.y = Math.sin(cometAngle * 2) * 300;
-
-  // Cập nhật vị trí đuôi sao chổi
-  cometTail.position.copy(comet.position);
-  cometTail.position.x -= 5;
-}
-
 animate();

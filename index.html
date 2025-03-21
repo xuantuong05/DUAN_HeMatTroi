@@ -5,22 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Mô Phỏng Hệ Mặt Trời</title>
     <link rel="stylesheet" href="style.css" />
+    <link rel="icon" type="image/png" href="assets/favicon.png" />
+
+    <!-- Meta SEO -->
+    <meta
+      name="description"
+      content="Mô phỏng hệ Mặt Trời 3D với Three.js, tương tác trực tiếp với các hành tinh"
+    />
+    <meta
+      name="keywords"
+      content="Three.js, Hệ Mặt Trời, 3D, WebGL, JavaScript"
+    />
+    <meta name="author" content="Tường" />
   </head>
   <body>
-    <canvas id="solarCanvas"></canvas>
-    <div
-      id="info-panel"
-      style="
-        display: none;
-        position: fixed;
-        top: 10px;
-        right: 10px;
-        padding: 10px;
-        background: rgba(0, 0, 0, 0.7);
-        color: white;
-        border-radius: 5px;
-      "
-    >
+    <!-- Thêm container để chứa Three.js -->
+    <div id="solar-system-container">
+      <canvas id="solarCanvas"></canvas>
+    </div>
+
+    <!-- Bảng hiển thị thông tin hành tinh -->
+    <div id="info-panel">
       <h2 id="planet-name">🌍</h2>
       <p id="planet-info"></p>
     </div>
@@ -29,6 +34,21 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 
-    <script src="script.js"></script>
+    <!-- Đảm bảo `script.js` chỉ chạy sau khi tài liệu tải xong -->
+    <script>
+      window.onload = function () {
+        const canvas = document.getElementById("solarCanvas");
+        if (canvas) {
+          console.log("Canvas loaded, starting Three.js...");
+          const script = document.createElement("script");
+          script.src = "script.js";
+          document.body.appendChild(script);
+        } else {
+          console.error(
+            "Canvas không tìm thấy! Kiểm tra lại ID của thẻ <canvas>."
+          );
+        }
+      };
+    </script>
   </body>
 </html>
