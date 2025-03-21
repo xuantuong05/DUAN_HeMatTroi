@@ -15,3 +15,7 @@ canvas {
   top: 0;
   left: 0;
 }
+#info-panel {
+  font-family: Arial, sans-serif;
+  width: 200px;
+}
